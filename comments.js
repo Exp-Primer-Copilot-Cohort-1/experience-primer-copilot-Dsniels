@@ -1,70 +1,81 @@
-// Crear un servidor web
-// Crear un fichero de comentarios
-// Crear una API REST
-// GET /comments -> Devuelve todos los comentarios
-// POST /comments -> Añade un comentario
-// GET /comments/:id -> Devuelve el comentario con el id dado
-// DELETE /comments/:id -> Elimina el comentario con el id dado
+// Create web server
+// Start server
+// Define routes
+// Get comments from database
+// Post comments to database
+// Serve static files
+// Serve index.html
+// Serve comments.js
+// Serve style.css
+// Serve 404.html
+// Serve 500.html
+// Serve 400.html
 
-const express = require('express');
-const fs = require('fs').promises;
-const path = require('path');
+// Define dependencies
+var express = require('express');
+var app = express();
+var bodyParser = require('body-parser');
+var MongoClient = require('mongodb').MongoClient;
+var assert = require('assert');
 
-const app = express();
-app.use(express.json());
-
-const COMMENTS_PATH = path.join(__dirname, 'comments.json');
-
-app.get('/comments', async (req, res) => {
-  try {
-    const comments = await fs.readFile(COMMENTS_PATH);
-    res.json(JSON.parse(comments));
-  } catch (error) {
-    res.status(500).send(error.message);
-  }
+// Start server
+app.listen(3000, function() {
+  console.log('Server running on http://localhost:3000');
 });
 
-app.post('/comments', async (req, res) => {
-  try {
-    const comments = JSON.parse(await fs.readFile(COMMENTS_PATH));
-    const newComment = req.body;
-    comments.push(newComment);
-    await fs.writeFile(COMMENTS_PATH, JSON.stringify(comments, null, 2));
-    res.json(newComment);
-  } catch (error) {
-    res.status(500).send(error.message);
-  }
+// Define routes
+app.use(bodyParser.json());
+app.use(express.static('public'));
+
+// Get comments from database
+app.get('/comments', function(req, res) {
+  MongoClient.connect('mongodb://localhost:27017/comments', function(err, db) {
+    assert.equal(null, err);
+    db.collection('comments').find().toArray(function(err, comments) {
+      assert.equal(null, err);
+      res.send(comments);
+    });
+  });
 });
 
-app.get('/comments/:id', async (req, res) => {
-  try {
-    const comments = JSON.parse(await fs.readFile(COMMENTS_PATH));
-    const comment = comments.find(comment => comment.id === req.params.id);
-    if (!comment) {
-      res.status(404).send('Comment not found');
-      return;
-    }
-    res.json(comment);
-  } catch (error) {
-    res.status(500).send(error.message);
-  }
+// Post comments to database
+app.post('/comments', function(req, res) {
+  MongoClient.connect('mongodb://localhost:27017/comments', function(err, db) {
+    assert.equal(null, err);
+    db.collection('comments').insertOne(req.body, function(err, result) {
+      assert.equal(null, err);
+      res.send(result);
+    });
+  });
 });
 
-app.delete('/comments/:id', async (req, res) => {
-  try {
-    const comments = JSON.parse(await fs.readFile(COMMENTS_PATH));
-    const filteredComments = comments.filter(comment => comment.id !== req.params.id);
-    if (comments.length === filteredComments.length) {
-      res.status(404).send('Comment not found');
-      return;
-    }
-    await fs.writeFile(COMMENTS_PATH, JSON.stringify(filteredComments, null, 2));
-    res.send('Comment deleted');
-  } catch (error) {
-    res.status(500).send(error.message);
-  }
+// Serve static files
+app.get('/style.css', function(req, res) {
+  res.sendFile(__dirname + '/public/style.css');
 });
 
-app.listen(3000, () => {
-  console.log('Server listening on port 3000');
+// Serve index.html
+app.get('/', function(req, res) {
+  res.sendFile(__dirname + '/public/index.html');
+});
+
+// Serve comments.js
+app.get('/comments.js', function(req, res) {
+  res.sendFile(__dirname + '/public/comments.js');
+});
+
+// Serve 404.html
+app.get('*', function(req, res) {
+  res.status(404).sendFile(__dirname + '/public/404.html');
+});
+
+// Serve 500.html
+app.use(function(err, req, res, next) {
+  console.error(err.stack);
+  res.status(500).sendFile(__dirname + '/public/500.html');
+});
+
+// Serve 400.html
+app.use(function(req, res) {
+  res.status(400).sendFile(__dirname + '/public/400.html');
 });
