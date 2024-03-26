@@ -1,15 +1,5 @@
 // Create web server
-// Start server
-// Define routes
-// Get comments from database
-// Post comments to database
-// Serve static files
-// Serve index.html
-// Serve comments.js
-// Serve style.css
-// Serve 404.html
-// Serve 500.html
-// Serve 400.html
+
 
 // Define dependencies
 var express = require('express');
